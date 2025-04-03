@@ -50,13 +50,15 @@
   @apply bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300;
 }
 
-/* User cursor styles */
+/* Enhanced User cursor styles */
 .user-cursor {
   position: absolute;
   pointer-events: none;
   z-index: 1000;
   transform: translate(-50%, -50%);
-  transition: transform 0.1s ease;
+  transition: transform 0.1s ease-out, left 0.1s ease-out, top 0.1s ease-out;
+  width: 20px;
+  height: 20px;
 }
 
 .user-cursor::before {
@@ -64,27 +66,41 @@
   display: block;
   width: 0;
   height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 12px solid;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 16px solid;
   transform: rotate(-45deg);
   position: absolute;
-  top: -6px;
-  left: -6px;
+  top: -4px;
+  left: -4px;
 }
 
 .user-cursor::after {
   content: attr(data-name);
   display: block;
   position: absolute;
-  top: 12px;
-  left: 0;
+  top: 14px;
+  left: 8px;
   font-size: 12px;
+  font-weight: bold;
   white-space: nowrap;
   background-color: inherit;
   color: white;
-  padding: 2px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
+  opacity: 0.85;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Add cursor animation for better visibility */
+@keyframes cursorPulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.user-cursor.new-user {
+  animation: cursorPulse 0.5s ease-in-out 2;
 }
 
 /* Share modal styles */

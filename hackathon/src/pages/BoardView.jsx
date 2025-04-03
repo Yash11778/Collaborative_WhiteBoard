@@ -1,76 +1,90 @@
-import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
-import axios from 'axios'
-import Canvas from '../components/Canvas'
-import Toolbar from '../components/Toolbar'
-import UserPresence from '../components/UserPresence'
-import ErrorBoundary from '../components/ErrorBoundary'
-import ShareBoard from '../components/ShareBoard'
-import ActiveUserCount from '../components/ActiveUserCount'
-import ChatPanel from '../components/ChatPanel'
-import { useBoardStore } from '../store/boardStore'
-import { useChatStore } from '../store/chatStore'
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import axios from 'axios';
+import Canvas from '../components/Canvas';
+import Toolbar from '../components/Toolbar';
+import { useBoardStore } from '../store/boardStore';
+import { useSocketStore } from '../store/socketStore';
+import ActiveUserCount from '../components/ActiveUserCount';
+import ChatPanel from '../components/ChatPanel';
+import ShareBoard from '../components/ShareBoard';
 
 function BoardView() {
-  const { boardId } = useParams()
-  const [board, setBoard] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const { setElements } = useBoardStore()
-  const { loadChatHistory } = useChatStore()
+  const { boardId } = useParams();
+  const { setElements } = useBoardStore();
+  const { socket, initSocket } = useSocketStore();
+  const [boardName, setBoardName] = useState('Loading...');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchBoard = async () => {
-      try {
-        setLoading(true)
-        const response = await axios.get(`/api/boards/${boardId}`)
-        setBoard(response.data)
-        setElements(response.data.elements || [])
-        setError(null)
-        
-        // Load chat history for this board
-        await loadChatHistory(boardId)
-      } catch (err) {
-        console.error('Error fetching board:', err)
-        setError('Failed to load this whiteboard. It may not exist or you might not have access.')
-      } finally {
-        setLoading(false)
-      }
+    // Initialize socket if not already done
+    if (!socket) {
+      initSocket();
     }
 
-    fetchBoard()
-  }, [boardId, setElements, loadChatHistory])
+    // Fetch board data
+    const fetchBoard = async () => {
+      try {
+        const response = await axios.get(`/api/boards/${boardId}`);
+        const board = response.data;
+        
+        setBoardName(board.name || 'Untitled Board');
+        if (board.elements) {
+          setElements(board.elements);
+        }
+        
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching board:', err);
+        setError('Failed to load board data');
+        setLoading(false);
+      }
+    };
 
-  if (loading) return <div className="flex justify-center p-12">Loading whiteboard...</div>
-  if (error) return <div className="text-red-500 p-8">{error}</div>
+    fetchBoard();
+  }, [boardId, setElements, socket, initSocket]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[70vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-3 text-gray-600 dark:text-gray-300">Loading board...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8">
+        <div className="text-red-500 text-xl">{error}</div>
+        <p className="mt-2">Please try again or create a new board.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)]">
-      <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+      <div className="flex justify-between items-center mb-2">
+        <h1 className="text-2xl font-bold truncate">{boardName}</h1>
         <div className="flex items-center space-x-3">
-          <h1 className="text-2xl font-bold">{board?.name || 'Untitled Board'}</h1>
           <ActiveUserCount boardId={boardId} />
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <UserPresence boardId={boardId} />
-          <ShareBoard boardId={boardId} boardName={board?.name} />
+          <ShareBoard boardId={boardId} boardName={boardName} />
         </div>
       </div>
       
-      <div className="flex flex-col flex-grow overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow">
-        <Toolbar boardId={boardId} />
-        <div className="flex-grow relative overflow-hidden">
-          <ErrorBoundary>
-            <Canvas boardId={boardId} />
-          </ErrorBoundary>
-        </div>
-      </div>
+      <Toolbar boardId={boardId} />
       
-      {/* Chat Panel */}
-      <ChatPanel boardId={boardId} />
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 relative">
+          <Canvas boardId={boardId} />
+        </div>
+        <ChatPanel boardId={boardId} />
+      </div>
     </div>
-  )
+  );
 }
 
-export default BoardView
+export default BoardView;

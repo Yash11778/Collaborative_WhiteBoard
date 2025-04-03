@@ -1,85 +1,74 @@
-import { useState, useEffect } from 'react'
-import { useSocketStore } from '../store/socketStore'
-import JoinNotification from './JoinNotification'
+import { useState, useEffect } from 'react';
+import { useSocketStore } from '../store/socketStore';
+import { useAuthStore } from '../store/authStore';
 
 function UserPresence({ boardId }) {
-  const [users, setUsers] = useState([])
-  const [notifications, setNotifications] = useState([])
-  const { socket } = useSocketStore()
-
+  const [cursors, setCursors] = useState({});
+  const { socket } = useSocketStore();
+  const { user } = useAuthStore();
+  
   useEffect(() => {
-    if (!socket || !boardId) return
+    if (!socket) return;
 
-    const handleUserJoined = (user) => {
-      setUsers(prev => {
-        // Check if user already exists
-        const exists = prev.some(u => u.id === user.id)
-        if (exists) return prev
-        
-        // Add notification for new user (except for the first user which is likely self)
-        if (prev.length > 0) {
-          setNotifications(current => [...current, { id: user.id, user }])
-        }
-        
-        return [...prev, user]
-      })
-    }
+    // Handle incoming cursor updates
+    const handleCursorPositions = (userPositions) => {
+      // Filter out your own cursor and users without position data
+      const otherUserCursors = userPositions.filter(
+        userData => userData.id !== socket.id && userData.position
+      );
+      
+      // Convert array to object for easier lookup
+      const cursorsMap = {};
+      otherUserCursors.forEach(userData => {
+        cursorsMap[userData.id] = {
+          position: userData.position,
+          name: userData.name,
+          color: userData.color || '#ff0000'
+        };
+      });
+      
+      setCursors(cursorsMap);
+    };
 
+    // Handle user leaving
     const handleUserLeft = (userId) => {
-      setUsers(prev => prev.filter(user => user.id !== userId))
-    }
+      setCursors(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
+    };
 
-    const handleCursorPositions = (updatedUsers) => {
-      setUsers(updatedUsers)
-    }
-
-    socket.on('user-joined', handleUserJoined)
-    socket.on('user-left', handleUserLeft)
-    socket.on('cursor-positions', handleCursorPositions)
-
+    socket.on('cursor-positions', handleCursorPositions);
+    socket.on('user-left', handleUserLeft);
+    
     return () => {
-      socket.off('user-joined', handleUserJoined)
-      socket.off('user-left', handleUserLeft)
-      socket.off('cursor-positions', handleCursorPositions)
-    }
-  }, [socket, boardId])
-
-  const removeNotification = (id) => {
-    setNotifications(current => current.filter(n => n.id !== id))
-  }
+      socket.off('cursor-positions', handleCursorPositions);
+      socket.off('user-left', handleUserLeft);
+    };
+  }, [socket, boardId]);
 
   return (
-    <div className="user-presence flex items-center">
-      {users.length > 0 ? (
-        <div className="flex -space-x-2">
-          {users.map((user) => (
-            <div
-              key={user.id}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white"
-              style={{ backgroundColor: user.color || '#6366F1' }}
-              title={user.name || 'Anonymous'}
-            >
-              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-            </div>
-          ))}
-          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold ml-1 border-2 border-white dark:border-gray-800">
-            {users.length}
-          </div>
-        </div>
-      ) : (
-        <div className="text-sm text-gray-500">No other users online</div>
-      )}
-      
-      {/* Join Notifications */}
-      {notifications.map(({ id, user }) => (
-        <JoinNotification 
-          key={id} 
-          user={user} 
-          onDismiss={() => removeNotification(id)} 
-        />
-      ))}
+    <div className="user-cursors-container">
+      {Object.keys(cursors).map(userId => {
+        const cursor = cursors[userId];
+        if (!cursor.position) return null;
+        
+        return (
+          <div 
+            key={userId}
+            className="user-cursor"
+            style={{
+              left: cursor.position.x,
+              top: cursor.position.y,
+              color: cursor.color
+            }}
+            data-name={cursor.name || 'Anonymous'}
+          />
+        );
+      })}
     </div>
-  )
+  );
 }
 
-export default UserPresence
+export default UserPresence;

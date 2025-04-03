@@ -4,14 +4,19 @@ import { useBoardStore } from '../store/boardStore'
 import { useSocketStore } from '../store/socketStore'
 import { useAuthStore } from '../store/authStore'
 import { generateRandomUsername } from '../utils/helpers'
+import UserPresence from './UserPresence'
 
 function Canvas({ boardId }) {
   const canvasRef = useRef(null)
   const fabricRef = useRef(null)
+  const canvasContainerRef = useRef(null)
   const { elements, addElement, updateElement, removeElement } = useBoardStore()
   const { socket, initSocket } = useSocketStore()
   const { user, token, isAuthenticated } = useAuthStore()
   const [username] = useState(generateRandomUsername)
+  const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 })
+  const [lastEmittedPosition, setLastEmittedPosition] = useState({ x: 0, y: 0 })
+  const throttleTimeout = useRef(null)
 
   // Initialize fabric canvas
   useEffect(() => {
@@ -74,13 +79,40 @@ function Canvas({ boardId }) {
         }
       })
 
-      // Mouse move event for cursor position
-      canvas.on('mouse:move', (e) => {
-        if (socket) {
-          const pointer = canvas.getPointer(e.e)
-          socket.emit('cursor-move', boardId, { x: pointer.x, y: pointer.y })
+      // Track cursor position with throttling
+      const handleMouseMove = (e) => {
+        const pointer = canvas.getPointer(e.e);
+        const canvasRect = canvasContainerRef.current.getBoundingClientRect();
+        
+        // Calculate absolute position within the page (not just canvas)
+        const absoluteX = canvasRect.left + pointer.x;
+        const absoluteY = canvasRect.top + pointer.y;
+        
+        setCursorPosition({ x: absoluteX, y: absoluteY });
+        
+        // Throttle socket emissions for better performance
+        if (socket && !throttleTimeout.current) {
+          throttleTimeout.current = setTimeout(() => {
+            // Only emit if the cursor has moved significantly
+            const dx = absoluteX - lastEmittedPosition.x;
+            const dy = absoluteY - lastEmittedPosition.y;
+            
+            // If cursor has moved at least 5px, emit position
+            if (Math.sqrt(dx*dx + dy*dy) > 5) {
+              socket.emit('cursor-move', boardId, { 
+                x: absoluteX, 
+                y: absoluteY 
+              });
+              setLastEmittedPosition({ x: absoluteX, y: absoluteY });
+            }
+            
+            throttleTimeout.current = null;
+          }, 50); // Throttle to emit at most once every 50ms
         }
-      })
+      };
+
+      // Add cursor tracking and throttled emission
+      canvas.on('mouse:move', handleMouseMove);
 
       // Setup drawing tools
       const handleKeyDown = function(e) {
@@ -115,6 +147,12 @@ function Canvas({ boardId }) {
         window.removeEventListener('resize', handleResize)
         document.removeEventListener('keydown', handleKeyDown)
         window.fabricCanvas = undefined
+        canvas.off('mouse:move', handleMouseMove);
+        
+        if (throttleTimeout.current) {
+          clearTimeout(throttleTimeout.current);
+        }
+        
         canvas.dispose()
       }
     }
@@ -245,8 +283,11 @@ function Canvas({ boardId }) {
   }, [elements])
 
   return (
-    <div className="w-full h-full overflow-auto bg-white">
+    <div className="w-full h-full overflow-auto bg-white relative" ref={canvasContainerRef}>
       <canvas ref={canvasRef} />
+      
+      {/* Add the user presence component for cursor visualization */}
+      <UserPresence boardId={boardId} />
     </div>
   )
 }
