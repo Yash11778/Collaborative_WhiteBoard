@@ -72,26 +72,34 @@ export const useBoardStore = create((set, get) => ({
   
   removeElement: (elementId) => {
     if (!elementId) {
-      console.error('Invalid elementId:', elementId)
-      return
+      console.error('Invalid elementId:', elementId);
+      return;
     }
 
-    const { elements, history, historyIndex } = get()
-    const newElements = elements.filter(e => e.id !== elementId)
+    const { elements, history, historyIndex } = get();
     
-    // Add to history
-    const newHistory = [...history.slice(0, historyIndex + 1), newElements]
+    // Check if the element exists before trying to remove it
+    const elementExists = elements.some(e => e.id === elementId);
+    if (!elementExists) {
+      // Element doesn't exist in store, nothing to remove
+      return;
+    }
     
-    set({
-      elements: newElements,
-      history: newHistory,
-      historyIndex: newHistory.length - 1,
-      canUndo: true,
-      canRedo: false
-    })
+    const newElements = elements.filter(e => e.id !== elementId);
     
-    // Notify server about the deletion if needed
-    // This can be added if we want server-side tracking of deletions
+    // Only add to history if something actually changed
+    if (newElements.length !== elements.length) {
+      // Add to history
+      const newHistory = [...history.slice(0, historyIndex + 1), newElements];
+      
+      set({
+        elements: newElements,
+        history: newHistory,
+        historyIndex: newHistory.length - 1,
+        canUndo: true,
+        canRedo: false
+      });
+    }
   },
   
   undo: () => {

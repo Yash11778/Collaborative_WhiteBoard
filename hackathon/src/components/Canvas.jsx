@@ -36,26 +36,40 @@ function Canvas({ boardId }) {
       // Make canvas accessible to Toolbar component
       window.fabricCanvas = canvas
       
+      // Configure text editing behavior to prevent overlaps
+      fabric.IText.prototype.onDeselect = function() {
+        // When text is deselected, make sure it's not empty
+        if (this.text === '' || this.text === 'Text') {
+          canvas.remove(this);
+        }
+      };
+      
       // Setup event listeners for object modifications
       canvas.on('object:added', (e) => {
-        if (!e.target || e.target._ignoreSave) return
+        if (!e.target || e.target._ignoreSave || e.target.eraserIndicator) return;
         
-        const serializedObj = e.target.toJSON()
-        const elementId = e.target.id || Date.now().toString()
-        e.target.id = elementId
+        // Prevent duplicate handling of the same element
+        if (e.target._addedToStore) return;
+        
+        const serializedObj = e.target.toJSON();
+        const elementId = e.target.id || Date.now().toString();
+        e.target.id = elementId;
+        
+        // Mark as added to prevent duplicate addition
+        e.target._addedToStore = true;
         
         addElement({
           id: elementId,
           type: e.target.type,
           data: serializedObj
-        })
+        });
         
         if (socket) {
           socket.emit('draw-element', boardId, {
             id: elementId,
             type: e.target.type,
             data: serializedObj
-          })
+          });
         }
       })
 

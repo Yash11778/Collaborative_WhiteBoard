@@ -5,6 +5,8 @@ import {
 } from 'react-icons/fa'
 import { useBoardStore } from '../store/boardStore'
 import { fabric } from 'fabric'
+import { eraseAtPoint, createEraserIndicator } from '../utils/eraserUtils'
+import { findSuitablePosition } from '../utils/helpers'
 
 function Toolbar({ boardId }) {
   const [activeTool, setActiveTool] = useState('select')
@@ -28,10 +30,29 @@ function Toolbar({ boardId }) {
     return () => clearInterval(interval)
   }, [])
 
+  // Store reference to the board store for the eraser utility
+  useEffect(() => {
+    // Make boardStore available globally for the eraser utility
+    window.boardStore = useBoardStore.getState();
+    
+    return () => {
+      delete window.boardStore;
+    };
+  }, []);
+
   const handleToolChange = (tool) => {
+    // If we're switching from eraser, remove the indicator
+    const canvas = window.fabricCanvas;
+    if (activeTool === 'eraser' && canvas) {
+      const eraserIndicator = canvas.getObjects().find(obj => obj.eraserIndicator);
+      if (eraserIndicator) {
+        canvas.remove(eraserIndicator);
+        canvas.renderAll();
+      }
+    }
+
     setActiveTool(tool)
     
-    const canvas = window.fabricCanvas
     if (!canvas) {
       console.error('Canvas not initialized')
       return
@@ -172,16 +193,33 @@ function Toolbar({ boardId }) {
         canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
+          // Get the pointer position from click
           const pointer = canvas.getPointer(o.e)
+          
+          // Find a suitable position that avoids overlap
+          // If user clicked in empty space, use that position
+          // Otherwise, find a non-overlapping position
+          const position = canvas.findTarget(o.e) 
+            ? findSuitablePosition(canvas) 
+            : { x: pointer.x, y: pointer.y }
+          
+          // Create the text object at the chosen position
           const text = new fabric.IText('Text', {
-            left: pointer.x,
-            top: pointer.y,
+            left: position.x,
+            top: position.y,
             fontSize: 20,
-            fill: strokeColor
+            fill: strokeColor,
+            textAlign: 'center',
+            originX: 'center', // Center horizontally
+            originY: 'center'  // Center vertically
           })
+          
           canvas.add(text)
           canvas.setActiveObject(text)
           text.enterEditing()
+          
+          // Center the text visually after adding it
+          text.setCoords()
         })
         break
         
@@ -190,67 +228,95 @@ function Toolbar({ boardId }) {
         canvas.selection = false;
         canvas.defaultCursor = 'crosshair';
         
+        // Clear any existing event listeners
         canvas.off('mouse:down');
         canvas.off('mouse:move');
         canvas.off('mouse:up');
         
         let isErasing = false;
-        const eraserSize = strokeWidth * 4;
+        const eraserSize = strokeWidth * 5; // Larger eraser for better usability
+        let eraserIndicator = createEraserIndicator(eraserSize);
         
+        // Track if mouse is down to prevent duplicate erasing
+        const isMouseDown = { value: false };
+        
+        // Create throttling mechanism for erasing
+        const throttle = {
+          timeout: null,
+          last: 0,
+          delay: 50 // milliseconds between erases
+        };
+        
+        // On mouse down, start erasing
         canvas.on('mouse:down', (o) => {
           isErasing = true;
+          isMouseDown.value = true;
           const pointer = canvas.getPointer(o.e);
-          // Show visual feedback for eraser (optional)
-          canvas.setCursor('url(data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="' + eraserSize/2 + '" fill="rgba(255,0,0,0.3)"/></svg>)');
-          eraseAtPoint(pointer.x, pointer.y, eraserSize);
+          
+          // Immediate first erase
+          eraseAtPoint(canvas, pointer.x, pointer.y, eraserSize, boardId);
         });
         
+        // On mouse move, show eraser indicator and erase if button is down
         canvas.on('mouse:move', (o) => {
-          if (!isErasing) return;
           const pointer = canvas.getPointer(o.e);
-          eraseAtPoint(pointer.x, pointer.y, eraserSize);
+          
+          // Update eraser indicator position
+          if (eraserIndicator) {
+            eraserIndicator.set({
+              left: pointer.x,
+              top: pointer.y
+            });
+            
+            if (!canvas.contains(eraserIndicator)) {
+              canvas.add(eraserIndicator);
+            }
+            
+            eraserIndicator.bringToFront();
+          }
+          
+          // If erasing (mouse button down), erase objects at the pointer with throttling
+          if (isErasing && isMouseDown.value) {
+            const now = Date.now();
+            
+            if (now - throttle.last > throttle.delay) {
+              eraseAtPoint(canvas, pointer.x, pointer.y, eraserSize, boardId);
+              throttle.last = now;
+            } else {
+              // Clear any existing timeout
+              if (throttle.timeout) clearTimeout(throttle.timeout);
+              
+              // Schedule erase to ensure it happens even with fast mouse movements
+              throttle.timeout = setTimeout(() => {
+                if (isMouseDown.value) {
+                  eraseAtPoint(canvas, pointer.x, pointer.y, eraserSize, boardId);
+                }
+                throttle.timeout = null;
+              }, throttle.delay);
+            }
+          }
+          
+          canvas.renderAll();
         });
         
+        // Stop erasing on mouse up
         canvas.on('mouse:up', () => {
           isErasing = false;
-          canvas.setCursor('default');
+          isMouseDown.value = false;
+          
+          // Clear any pending erase operations
+          if (throttle.timeout) {
+            clearTimeout(throttle.timeout);
+            throttle.timeout = null;
+          }
         });
+        
         break;
-
+        
       default:
         break
     }
   }
-
-  // Function to handle erasing at a specific point
-  const eraseAtPoint = (x, y, size) => {
-    const canvas = window.fabricCanvas;
-    if (!canvas) return;
-    
-    // Find objects that intersect with the eraser
-    const objects = canvas.getObjects();
-    const objectsToRemove = objects.filter(obj => {
-      const objCenter = obj.getCenterPoint();
-      const distance = Math.sqrt(Math.pow(objCenter.x - x, 2) + Math.pow(objCenter.y - y, 2));
-      return distance < size / 2 + obj.width / 2;
-    });
-    
-    // Remove the objects found
-    if (objectsToRemove.length > 0) {
-      objectsToRemove.forEach(obj => {
-        if (obj.id) {
-          // Remove from store and notify others
-          removeElement(obj.id);
-          const socket = window.socket;
-          if (socket) {
-            socket.emit('delete-element', boardId, obj.id);
-          }
-          canvas.remove(obj);
-        }
-      });
-      canvas.renderAll();
-    }
-  };
 
   const handleColorChange = (e) => {
     const newColor = e.target.value
@@ -328,39 +394,39 @@ function Toolbar({ boardId }) {
   }
 
   const handleExportPNG = () => {
-    const canvas = window.fabricCanvas;
-    if (!canvas) return;
-
+    const canvas = window.fabricCanvas
+    if (!canvas) return
+    
     try {
       // Set export status
-      setExportStatus('Exporting...');
+      setExportStatus('Exporting...')
 
       // Create a temporary clone of the canvas for export to avoid modifying the original
       const dataURL = canvas.toDataURL({
         format: 'png',
         quality: 1.0,
         multiplier: 2 // Higher resolution
-      });
-
+      })
+      
       // Create a download link and trigger download
-      const link = document.createElement('a');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      link.download = `collabboard-${timestamp}.png`;
-      link.href = dataURL;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
+      const link = document.createElement('a')
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+      link.download = `collabboard-${timestamp}.png`
+      link.href = dataURL
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
       // Show success message
-      setExportStatus('Exported!');
-      setTimeout(() => setExportStatus(null), 2000);
+      setExportStatus('Exported!')
+      setTimeout(() => setExportStatus(null), 2000)
     } catch (error) {
-      console.error('Error exporting canvas:', error);
-      setExportStatus('Export failed');
-      setTimeout(() => setExportStatus(null), 2000);
+      console.error('Error exporting canvas:', error)
+      setExportStatus('Export failed')
+      setTimeout(() => setExportStatus(null), 2000)
     }
-  };
-
+  }
+  
   return (
     <div className="bg-gray-100 dark:bg-gray-700 p-2 flex flex-wrap gap-2 items-center border-b border-gray-300 dark:border-gray-600">
       <button

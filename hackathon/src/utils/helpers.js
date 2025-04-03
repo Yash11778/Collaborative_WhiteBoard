@@ -127,3 +127,82 @@ export function findObjectsUnderPoint(canvas, x, y, radius = 10) {
     );
   });
 }
+
+/**
+ * Checks if a point would cause overlap with existing objects on canvas
+ * @param {Object} canvas - Fabric.js canvas instance
+ * @param {number} x - X coordinate to check
+ * @param {number} y - Y coordinate to check
+ * @param {number} padding - Minimum distance to maintain from other objects
+ * @returns {boolean} True if position would overlap with existing objects
+ */
+export function wouldOverlap(canvas, x, y, padding = 50) {
+  if (!canvas) return false;
+  
+  const objects = canvas.getObjects();
+  
+  // Check if point is too close to any existing object
+  return objects.some(obj => {
+    if (!obj.visible || obj._ignoreSave || obj.eraserIndicator) return false;
+    
+    // Get object bounds
+    const bounds = obj.getBoundingRect();
+    
+    // Check if point is within the expanded bounds (original bounds + padding)
+    return (
+      x >= (bounds.left - padding) &&
+      x <= (bounds.left + bounds.width + padding) &&
+      y >= (bounds.top - padding) &&
+      y <= (bounds.top + bounds.height + padding)
+    );
+  });
+}
+
+/**
+ * Finds a suitable position for a new element that avoids overlap
+ * @param {Object} canvas - Fabric.js canvas instance
+ * @param {number} padding - Minimum distance to maintain from other objects
+ * @returns {Object} Position with x and y coordinates
+ */
+export function findSuitablePosition(canvas, padding = 50) {
+  if (!canvas) {
+    return { x: 100, y: 100 }; // Default position if no canvas
+  }
+  
+  const width = canvas.width;
+  const height = canvas.height;
+  
+  // Try positions in a grid pattern
+  const gridSize = padding * 2;
+  const cols = Math.floor(width / gridSize);
+  const rows = Math.floor(height / gridSize);
+  
+  // First try center of canvas
+  const centerX = width / 2;
+  const centerY = height / 2;
+  
+  if (!wouldOverlap(canvas, centerX, centerY, padding)) {
+    return { x: centerX, y: centerY };
+  }
+  
+  // Try grid positions
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = (col + 0.5) * gridSize; // Center of cell
+      const y = (row + 0.5) * gridSize; // Center of cell
+      
+      if (!wouldOverlap(canvas, x, y, padding)) {
+        return { x, y };
+      }
+    }
+  }
+  
+  // If all positions are occupied, use randomized position with offset from center
+  const randomOffsetX = (Math.random() - 0.5) * 200;
+  const randomOffsetY = (Math.random() - 0.5) * 200;
+  
+  return { 
+    x: centerX + randomOffsetX, 
+    y: centerY + randomOffsetY 
+  };
+}
