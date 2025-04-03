@@ -1,11 +1,14 @@
-// Generate a random username for anonymous users
+/**
+ * Generate a random username for anonymous users
+ * @returns {string} Random username
+ */
 export function generateRandomUsername() {
-  const adjectives = ['Happy', 'Creative', 'Clever', 'Bold', 'Gentle', 'Wise', 'Brave', 'Calm', 'Eager', 'Kind'];
-  const nouns = ['Artist', 'Penguin', 'Tiger', 'Falcon', 'Dolphin', 'Panda', 'Koala', 'Eagle', 'Wizard', 'Sailor'];
+  const adjectives = ['Creative', 'Brilliant', 'Amazing', 'Bold', 'Swift', 'Quick', 'Clever'];
+  const nouns = ['Artist', 'Designer', 'Creator', 'Thinker', 'Maker', 'Collaborator'];
   
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  const randomNumber = Math.floor(Math.random() * 100);
+  const randomNumber = Math.floor(Math.random() * 1000);
   
   return `${randomAdjective}${randomNoun}${randomNumber}`;
 }
@@ -46,30 +49,26 @@ export function shareBoardViaWebShare(boardId, boardName) {
   });
 }
 
-// Export canvas as PNG image
-export function exportCanvasAsPNG(canvas, filename) {
-  if (!canvas) {
-    console.error('Canvas is not available for export');
-    return null;
-  }
+/**
+ * Export canvas as PNG image
+ * @param {Object} canvas - Fabric.js canvas instance
+ * @param {string} filename - Output filename
+ * @returns {Object|null} Data URL object or null on failure
+ */
+export function exportCanvasAsPNG(canvas, filename = 'canvas.png') {
+  if (!canvas) return null;
   
   try {
-    // Generate high-quality PNG
+    // Get data URL with multiplier for better quality export
     const dataURL = canvas.toDataURL({
       format: 'png',
-      quality: 1.0,
-      multiplier: 2 // Higher resolution
+      quality: 1,
+      multiplier: 2
     });
     
-    // If filename not provided, generate one with timestamp
-    if (!filename) {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      filename = `collabboard-${timestamp}.png`;
-    }
-    
+    // Return object with data and methods
     return {
       dataURL,
-      filename,
       download: () => {
         const link = document.createElement('a');
         link.download = filename;
@@ -80,7 +79,7 @@ export function exportCanvasAsPNG(canvas, filename) {
       }
     };
   } catch (error) {
-    console.error('Error exporting canvas as PNG:', error);
+    console.error('Error exporting canvas:', error);
     return null;
   }
 }
@@ -98,4 +97,33 @@ export function dataURLtoBlob(dataURL) {
   }
   
   return new Blob([uInt8Array], { type: contentType });
+}
+
+/**
+ * Find objects under a specific point in canvas
+ * @param {Object} canvas - Fabric.js canvas instance
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @param {number} radius - Detection radius
+ * @returns {Array} Array of objects found
+ */
+export function findObjectsUnderPoint(canvas, x, y, radius = 10) {
+  if (!canvas) return [];
+  
+  // Get all objects on the canvas
+  const objects = canvas.getObjects();
+  
+  // Find all objects that contain the point within the given radius
+  return objects.filter(obj => {
+    // Get the object's bounding box
+    const bounds = obj.getBoundingRect();
+    
+    // Check if point is within the object bounds + radius tolerance
+    return (
+      x >= (bounds.left - radius) &&
+      x <= (bounds.left + bounds.width + radius) &&
+      y >= (bounds.top - radius) &&
+      y <= (bounds.top + bounds.height + radius)
+    );
+  });
 }

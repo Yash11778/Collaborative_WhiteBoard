@@ -4,35 +4,96 @@ const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const jwt = require('jsonwebtoken');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
 
+// Check if we're using an in-memory database
+const useInMemory = process.env.IN_MEMORY_DB === 'true';
+if (useInMemory) {
+  console.log('Using in-memory database as configured in environment variables');
+}
+
 // Create Express app
 const app = express();
-app.use(cors());
+
+// Enhanced CORS setup to ensure frontend can connect
+app.use(cors({
+  origin: '*',  // In production, restrict this to your frontend domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  credentials: true
+}));
+
+// Middleware for parsing JSON
 app.use(express.json());
+
+// Debug middleware - log all requests
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+    console.log('Request body:', { ...req.body, password: req.body.password ? '[FILTERED]' : undefined });
+  }
+  next();
+});
 
 // Create HTTP server and Socket.io instance
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // This will accept connections from any origin
+    origin: "*",
     methods: ['GET', 'POST'],
     credentials: true
   },
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// Connect to MongoDB if not using in-memory database
+if (!useInMemory) {
+  console.log('Attempting to connect to MongoDB with URI:', process.env.MONGODB_URI?.replace(/mongodb\+srv:\/\/([^:]+):([^@]+)@/, 'mongodb+srv://[USERNAME]:[PASSWORD]@'));
+  
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('Connected to MongoDB successfully'))
+    .catch(err => {
+      console.error('MongoDB connection error:', err);
+      console.log('Connection error details:', err.message);
+      
+      // List possible solutions
+      console.log('\nPossible solutions:');
+      console.log('1. Make sure MongoDB is installed and running (if using local MongoDB)');
+      console.log('2. Check your connection string in .env file');
+      console.log('3. If using MongoDB Atlas, verify your network settings allow access');
+      console.log('4. Check username and password in your connection string');
+      console.log('\nFalling back to in-memory database...');
+      
+      // Set flag to use in-memory database as fallback
+      process.env.IN_MEMORY_DB = 'true';
+      useInMemory = true;
+      console.log('Using in-memory database (data will not persist!)');
+    });
+}
 
 // Import models
 const Board = require('./models/boardModel');
 const Message = require('./models/messageModel');
+const User = require('./models/userModel');
+
+// Import routes
+const userRoutes = require('./routes/userRoutes');
 
 // API routes
+app.use('/api/users', userRoutes);
+
+// Serve static files from the frontend build directory in production
+if (process.env.NODE_ENV === 'production') {
+  const frontendBuildPath = path.join(__dirname, '../hackathon/dist');
+  app.use(express.static(frontendBuildPath));
+}
+
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working' });
+});
+
 app.get('/api/boards', async (req, res) => {
   try {
     const boards = await Board.find({});
@@ -44,8 +105,7 @@ app.get('/api/boards', async (req, res) => {
 
 app.post('/api/boards', async (req, res) => {
   try {
-    const board = new Board(req.body);
-    await board.save();
+    const board = await Board.create(req.body);
     res.status(201).json(board);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -72,8 +132,8 @@ app.patch('/api/boards/:id', async (req, res) => {
     if (req.body.elements) board.elements = req.body.elements;
     if (req.body.name) board.name = req.body.name;
     
-    await board.save();
-    res.json(board);
+    const updatedBoard = await board.save();
+    res.json(updatedBoard);
   } catch (error) {
     console.error('Error updating board:', error);
     res.status(500).json({ error: error.message });
@@ -98,6 +158,15 @@ app.get('/api/boards/:boardId/messages', async (req, res) => {
   }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
+
 // Socket.io connection handling
 const users = {};
 const boardAccessCounts = {};  // Track number of users per board
@@ -105,12 +174,33 @@ const boardAccessCounts = {};  // Track number of users per board
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
   
-  socket.on('join-board', (boardId, userData) => {
+  socket.on('join-board', async (boardId, userData) => {
     socket.join(boardId);
+    
+    let userInfo = { ...userData };
+    
+    // If user has a token, get actual user data from database
+    if (userData.token) {
+      try {
+        const decoded = jwt.verify(userData.token, process.env.JWT_SECRET || 'fallback_secret');
+        const user = await User.findById(decoded.id);
+        if (user) {
+          userInfo = {
+            id: socket.id,
+            userId: user._id,
+            name: user.username,
+            color: user.color,
+          };
+        }
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+    
     users[socket.id] = {
       id: socket.id,
       boardId,
-      ...userData,
+      ...userInfo,
       joinedAt: Date.now()
     };
     
@@ -131,18 +221,19 @@ io.on('connection', (socket) => {
     io.to(boardId).emit('active-users-count', boardAccessCounts[boardId]);
     
     // Load chat history for the user
-    Message.find({ boardId })
-      .sort({ timestamp: -1 })
-      .limit(50)
-      .sort({ timestamp: 1 })
-      .then(messages => {
-        socket.emit('chat-history', messages);
-      })
-      .catch(err => {
-        console.error('Error fetching chat history:', err);
-      });
+    try {
+      const messages = await Message.find({ boardId })
+        .sort({ timestamp: -1 })
+        .limit(50)
+        .sort({ timestamp: 1 });
+        
+      socket.emit('chat-history', messages);
+    } catch (err) {
+      console.error('Error fetching chat history:', err);
+    }
   });
   
+  // ... rest of socket handlers ...
   socket.on('draw-element', (boardId, element) => {
     socket.to(boardId).emit('element-drawn', element);
   });
@@ -170,7 +261,7 @@ io.on('connection', (socket) => {
       
       const sender = users[socket.id];
       
-      const message = new Message({
+      const message = await Message.create({
         boardId,
         sender: {
           id: sender.id,
@@ -181,10 +272,8 @@ io.on('connection', (socket) => {
         timestamp: new Date()
       });
       
-      await message.save();
-      
       const messageToSend = {
-        id: message._id,
+        id: message._id || message.id,
         boardId,
         sender: {
           id: sender.id,
@@ -222,4 +311,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`API available at http://localhost:${PORT}/api`);
 });

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { fabric } from 'fabric'
 import { useBoardStore } from '../store/boardStore'
 import { useSocketStore } from '../store/socketStore'
+import { useAuthStore } from '../store/authStore'
 import { generateRandomUsername } from '../utils/helpers'
 
 function Canvas({ boardId }) {
@@ -9,6 +10,7 @@ function Canvas({ boardId }) {
   const fabricRef = useRef(null)
   const { elements, addElement, updateElement, removeElement } = useBoardStore()
   const { socket, initSocket } = useSocketStore()
+  const { user, token, isAuthenticated } = useAuthStore()
   const [username] = useState(generateRandomUsername)
 
   // Initialize fabric canvas
@@ -130,11 +132,20 @@ function Canvas({ boardId }) {
     }
 
     if (socket && boardId) {
-      // Join the board room
-      socket.emit('join-board', boardId, { 
-        name: username,
+      // Join the board room with authenticated user data if available
+      const userData = isAuthenticated && user ? {
+        name: user.username,
+        color: user.color,
+        token: token
+      } : { 
+        name: generateRandomUsername(),
         color: `#${Math.floor(Math.random()*16777215).toString(16)}`
-      })
+      };
+      
+      socket.emit('join-board', boardId, userData);
+
+      // Make socket available globally for eraser tool
+      window.socket = socket;
 
       // Handle incoming socket events
       const handleElementDrawn = (element) => {
@@ -204,9 +215,10 @@ function Canvas({ boardId }) {
         socket.off('element-drawn', handleElementDrawn)
         socket.off('element-updated', handleElementUpdated)
         socket.off('element-deleted', handleElementDeleted)
+        window.socket = undefined;
       }
     }
-  }, [socket, boardId, username, addElement, updateElement, removeElement, initSocket])
+  }, [socket, boardId, user, token, isAuthenticated, addElement, updateElement, removeElement, initSocket])
 
   // Load saved elements
   useEffect(() => {

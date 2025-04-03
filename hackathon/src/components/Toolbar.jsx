@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { 
   FaMousePointer, FaPen, FaSquare, FaCircle, FaFont, 
-  FaUndo, FaRedo, FaSave, FaTrash, FaDownload 
+  FaUndo, FaRedo, FaSave, FaTrash, FaDownload, FaEraser 
 } from 'react-icons/fa'
 import { useBoardStore } from '../store/boardStore'
 import { fabric } from 'fabric'
@@ -185,10 +185,72 @@ function Toolbar({ boardId }) {
         })
         break
         
+      case 'eraser':
+        canvas.isDrawingMode = false;
+        canvas.selection = false;
+        canvas.defaultCursor = 'crosshair';
+        
+        canvas.off('mouse:down');
+        canvas.off('mouse:move');
+        canvas.off('mouse:up');
+        
+        let isErasing = false;
+        const eraserSize = strokeWidth * 4;
+        
+        canvas.on('mouse:down', (o) => {
+          isErasing = true;
+          const pointer = canvas.getPointer(o.e);
+          // Show visual feedback for eraser (optional)
+          canvas.setCursor('url(data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="' + eraserSize/2 + '" fill="rgba(255,0,0,0.3)"/></svg>)');
+          eraseAtPoint(pointer.x, pointer.y, eraserSize);
+        });
+        
+        canvas.on('mouse:move', (o) => {
+          if (!isErasing) return;
+          const pointer = canvas.getPointer(o.e);
+          eraseAtPoint(pointer.x, pointer.y, eraserSize);
+        });
+        
+        canvas.on('mouse:up', () => {
+          isErasing = false;
+          canvas.setCursor('default');
+        });
+        break;
+
       default:
         break
     }
   }
+
+  // Function to handle erasing at a specific point
+  const eraseAtPoint = (x, y, size) => {
+    const canvas = window.fabricCanvas;
+    if (!canvas) return;
+    
+    // Find objects that intersect with the eraser
+    const objects = canvas.getObjects();
+    const objectsToRemove = objects.filter(obj => {
+      const objCenter = obj.getCenterPoint();
+      const distance = Math.sqrt(Math.pow(objCenter.x - x, 2) + Math.pow(objCenter.y - y, 2));
+      return distance < size / 2 + obj.width / 2;
+    });
+    
+    // Remove the objects found
+    if (objectsToRemove.length > 0) {
+      objectsToRemove.forEach(obj => {
+        if (obj.id) {
+          // Remove from store and notify others
+          removeElement(obj.id);
+          const socket = window.socket;
+          if (socket) {
+            socket.emit('delete-element', boardId, obj.id);
+          }
+          canvas.remove(obj);
+        }
+      });
+      canvas.renderAll();
+    }
+  };
 
   const handleColorChange = (e) => {
     const newColor = e.target.value
@@ -339,6 +401,14 @@ function Toolbar({ boardId }) {
         title="Text"
       >
         <FaFont />
+      </button>
+      
+      <button
+        onClick={() => handleToolChange('eraser')}
+        className={`tool-btn ${activeTool === 'eraser' ? 'active-tool' : ''}`}
+        title="Eraser"
+      >
+        <FaEraser />
       </button>
       
       <div className="h-6 mx-2 border-l border-gray-300 dark:border-gray-500"></div>

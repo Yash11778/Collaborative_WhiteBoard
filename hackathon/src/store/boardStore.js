@@ -89,6 +89,9 @@ export const useBoardStore = create((set, get) => ({
       canUndo: true,
       canRedo: false
     })
+    
+    // Notify server about the deletion if needed
+    // This can be added if we want server-side tracking of deletions
   },
   
   undo: () => {
