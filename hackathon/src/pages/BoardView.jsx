@@ -7,7 +7,9 @@ import UserPresence from '../components/UserPresence'
 import ErrorBoundary from '../components/ErrorBoundary'
 import ShareBoard from '../components/ShareBoard'
 import ActiveUserCount from '../components/ActiveUserCount'
+import ChatPanel from '../components/ChatPanel'
 import { useBoardStore } from '../store/boardStore'
+import { useChatStore } from '../store/chatStore'
 
 function BoardView() {
   const { boardId } = useParams()
@@ -15,6 +17,7 @@ function BoardView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { setElements } = useBoardStore()
+  const { loadChatHistory } = useChatStore()
 
   useEffect(() => {
     const fetchBoard = async () => {
@@ -24,6 +27,9 @@ function BoardView() {
         setBoard(response.data)
         setElements(response.data.elements || [])
         setError(null)
+        
+        // Load chat history for this board
+        await loadChatHistory(boardId)
       } catch (err) {
         console.error('Error fetching board:', err)
         setError('Failed to load this whiteboard. It may not exist or you might not have access.')
@@ -33,7 +39,7 @@ function BoardView() {
     }
 
     fetchBoard()
-  }, [boardId, setElements])
+  }, [boardId, setElements, loadChatHistory])
 
   if (loading) return <div className="flex justify-center p-12">Loading whiteboard...</div>
   if (error) return <div className="text-red-500 p-8">{error}</div>
@@ -60,6 +66,9 @@ function BoardView() {
           </ErrorBoundary>
         </div>
       </div>
+      
+      {/* Chat Panel */}
+      <ChatPanel boardId={boardId} />
     </div>
   )
 }
