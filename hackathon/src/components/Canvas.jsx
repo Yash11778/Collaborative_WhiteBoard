@@ -18,7 +18,10 @@ function Canvas({ boardId }) {
         width: window.innerWidth - 100,
         height: window.innerHeight - 200,
         backgroundColor: 'white',
-        isDrawingMode: false
+        isDrawingMode: false,
+        // Enable higher quality rendering for exports
+        preserveObjectStacking: true,
+        imageSmoothingEnabled: true
       })
 
       const canvas = fabricRef.current

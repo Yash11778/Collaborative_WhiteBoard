@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
-import { FaMousePointer, FaPen, FaSquare, FaCircle, FaFont, FaUndo, FaRedo, FaSave, FaTrash } from 'react-icons/fa'
+import { 
+  FaMousePointer, FaPen, FaSquare, FaCircle, FaFont, 
+  FaUndo, FaRedo, FaSave, FaTrash, FaDownload 
+} from 'react-icons/fa'
 import { useBoardStore } from '../store/boardStore'
 import { fabric } from 'fabric'
 
@@ -10,6 +13,7 @@ function Toolbar({ boardId }) {
   const { canUndo, canRedo, undo, redo, saveBoard } = useBoardStore()
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState(null)
+  const [exportStatus, setExportStatus] = useState(null)
 
   // Check if canvas is ready
   useEffect(() => {
@@ -261,6 +265,40 @@ function Toolbar({ boardId }) {
     }
   }
 
+  const handleExportPNG = () => {
+    const canvas = window.fabricCanvas;
+    if (!canvas) return;
+
+    try {
+      // Set export status
+      setExportStatus('Exporting...');
+
+      // Create a temporary clone of the canvas for export to avoid modifying the original
+      const dataURL = canvas.toDataURL({
+        format: 'png',
+        quality: 1.0,
+        multiplier: 2 // Higher resolution
+      });
+
+      // Create a download link and trigger download
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.download = `collabboard-${timestamp}.png`;
+      link.href = dataURL;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Show success message
+      setExportStatus('Exported!');
+      setTimeout(() => setExportStatus(null), 2000);
+    } catch (error) {
+      console.error('Error exporting canvas:', error);
+      setExportStatus('Export failed');
+      setTimeout(() => setExportStatus(null), 2000);
+    }
+  };
+
   return (
     <div className="bg-gray-100 dark:bg-gray-700 p-2 flex flex-wrap gap-2 items-center border-b border-gray-300 dark:border-gray-600">
       <button
@@ -361,6 +399,15 @@ function Toolbar({ boardId }) {
       >
         <FaSave />
         {saveStatus && <span className="ml-2 text-xs">{saveStatus}</span>}
+      </button>
+      
+      <button
+        onClick={handleExportPNG}
+        className="tool-btn text-blue-600 dark:text-blue-400"
+        title="Export as PNG"
+      >
+        <FaDownload />
+        {exportStatus && <span className="ml-2 text-xs">{exportStatus}</span>}
       </button>
       
       <button

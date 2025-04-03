@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { FaCopy, FaShare, FaQrcode, FaTimes } from 'react-icons/fa';
+import { FaCopy, FaShare, FaQrcode, FaTimes, FaDownload, FaCheck } from 'react-icons/fa';
 import QRCode from 'react-qr-code';
+import { exportCanvasAsPNG } from '../utils/helpers';
 
 function ShareBoard({ boardId, boardName }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(null);
   
   // Create shareable URL
   const shareableUrl = `${window.location.origin}/board/${boardId}`;
@@ -38,15 +40,47 @@ function ShareBoard({ boardId, boardName }) {
     }
   };
   
+  // Export board as PNG and open sharing options
+  const exportAndShare = async () => {
+    const canvas = window.fabricCanvas;
+    if (!canvas) return;
+    
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `collabboard-${boardName ? boardName.toLowerCase().replace(/\s+/g, '-') : 'untitled'}-${timestamp}.png`;
+      
+      const exportResult = exportCanvasAsPNG(canvas, filename);
+      if (exportResult) {
+        exportResult.download();
+        setExportSuccess('Image exported successfully!');
+        setTimeout(() => setExportSuccess(null), 3000);
+      }
+    } catch (error) {
+      console.error('Error exporting for sharing:', error);
+      setExportSuccess(false);
+      setTimeout(() => setExportSuccess(null), 3000);
+    }
+  };
+  
   return (
     <>
-      <button
-        onClick={shareViaAPI}
-        className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-        aria-label="Share this board"
-      >
-        <FaShare /> Share
-      </button>
+      <div className="flex space-x-2">
+        <button
+          onClick={shareViaAPI}
+          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          aria-label="Share this board"
+        >
+          <FaShare /> Share Link
+        </button>
+        
+        <button
+          onClick={exportAndShare}
+          className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+          aria-label="Export as PNG"
+        >
+          <FaDownload /> Export PNG
+        </button>
+      </div>
       
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -104,6 +138,39 @@ function ShareBoard({ boardId, boardName }) {
                 </button>
               )}
             </div>
+            
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-gray-600 dark:text-gray-300 mb-3">
+                You can also export this board as an image:
+              </p>
+              <button
+                onClick={() => {
+                  exportAndShare();
+                  setIsModalOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg"
+              >
+                <FaDownload /> Export as PNG
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {exportSuccess !== null && (
+        <div className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg 
+          flex items-center space-x-2 transition-opacity duration-300
+          ${exportSuccess ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}
+        >
+          <div className={`${exportSuccess ? 'bg-green-600' : 'bg-red-600'} p-2 rounded-full`}>
+            {exportSuccess ? <FaCheck /> : <FaTimes />}
+          </div>
+          <div>
+            <p className="font-medium">
+              {exportSuccess === true 
+                ? 'Image exported successfully!' 
+                : 'Failed to export image'}
+            </p>
           </div>
         </div>
       )}

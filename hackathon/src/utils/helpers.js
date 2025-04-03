@@ -45,3 +45,57 @@ export function shareBoardViaWebShare(boardId, boardName) {
     url: url,
   });
 }
+
+// Export canvas as PNG image
+export function exportCanvasAsPNG(canvas, filename) {
+  if (!canvas) {
+    console.error('Canvas is not available for export');
+    return null;
+  }
+  
+  try {
+    // Generate high-quality PNG
+    const dataURL = canvas.toDataURL({
+      format: 'png',
+      quality: 1.0,
+      multiplier: 2 // Higher resolution
+    });
+    
+    // If filename not provided, generate one with timestamp
+    if (!filename) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      filename = `collabboard-${timestamp}.png`;
+    }
+    
+    return {
+      dataURL,
+      filename,
+      download: () => {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataURL;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    };
+  } catch (error) {
+    console.error('Error exporting canvas as PNG:', error);
+    return null;
+  }
+}
+
+// Convert data URL to Blob for file saving
+export function dataURLtoBlob(dataURL) {
+  const parts = dataURL.split(';base64,');
+  const contentType = parts[0].split(':')[1];
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+  
+  for (let i = 0; i < rawLength; ++i) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+  
+  return new Blob([uInt8Array], { type: contentType });
+}

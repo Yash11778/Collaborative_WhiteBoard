@@ -6,6 +6,7 @@ import Toolbar from '../components/Toolbar'
 import UserPresence from '../components/UserPresence'
 import ErrorBoundary from '../components/ErrorBoundary'
 import ShareBoard from '../components/ShareBoard'
+import ActiveUserCount from '../components/ActiveUserCount'
 import { useBoardStore } from '../store/boardStore'
 
 function BoardView() {
@@ -40,7 +41,10 @@ function BoardView() {
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)]">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">{board?.name || 'Untitled Board'}</h1>
+        <div className="flex items-center space-x-3">
+          <h1 className="text-2xl font-bold">{board?.name || 'Untitled Board'}</h1>
+          <ActiveUserCount boardId={boardId} />
+        </div>
         
         <div className="flex items-center space-x-4">
           <UserPresence boardId={boardId} />
