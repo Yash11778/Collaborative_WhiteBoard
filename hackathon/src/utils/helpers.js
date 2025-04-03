@@ -20,3 +20,28 @@ export function formatDate(dateString) {
 export function generateRandomColor() {
   return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
 }
+
+// Create shareable URL for a board
+export function getShareableUrl(boardId) {
+  return `${window.location.origin}/board/${boardId}`;
+}
+
+// Check if Web Share API is available
+export function canUseWebShare() {
+  return navigator.share !== undefined;
+}
+
+// Share board URL through Web Share API
+export function shareBoardViaWebShare(boardId, boardName) {
+  if (!canUseWebShare()) {
+    return false;
+  }
+  
+  const url = getShareableUrl(boardId);
+  
+  return navigator.share({
+    title: `CollabBoard - ${boardName || 'Untitled Board'}`,
+    text: 'Join my collaborative whiteboard session!',
+    url: url,
+  });
+}

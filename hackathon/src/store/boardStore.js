@@ -8,15 +8,27 @@ export const useBoardStore = create((set, get) => ({
   canUndo: false,
   canRedo: false,
   
-  setElements: (elements) => set({ 
-    elements,
-    history: [elements],
-    historyIndex: 0,
-    canUndo: false,
-    canRedo: false
-  }),
+  setElements: (elements) => {
+    if (!elements || !Array.isArray(elements)) {
+      console.warn('setElements called with invalid elements:', elements)
+      elements = []
+    }
+    
+    set({ 
+      elements,
+      history: [elements],
+      historyIndex: 0,
+      canUndo: false,
+      canRedo: false
+    })
+  },
   
   addElement: (element) => {
+    if (!element || !element.id) {
+      console.error('Invalid element:', element)
+      return
+    }
+
     const { elements, history, historyIndex } = get()
     const newElements = [...elements, element]
     
@@ -33,6 +45,11 @@ export const useBoardStore = create((set, get) => ({
   },
   
   updateElement: (element) => {
+    if (!element || !element.id) {
+      console.error('Invalid element:', element)
+      return
+    }
+
     const { elements, history, historyIndex } = get()
     const elementIndex = elements.findIndex(e => e.id === element.id)
     
@@ -54,6 +71,11 @@ export const useBoardStore = create((set, get) => ({
   },
   
   removeElement: (elementId) => {
+    if (!elementId) {
+      console.error('Invalid elementId:', elementId)
+      return
+    }
+
     const { elements, history, historyIndex } = get()
     const newElements = elements.filter(e => e.id !== elementId)
     
@@ -80,6 +102,30 @@ export const useBoardStore = create((set, get) => ({
       canUndo: newIndex > 0,
       canRedo: true
     })
+    
+    // Update canvas with previous state if available
+    const canvas = window.fabricCanvas
+    if (canvas) {
+      canvas.clear()
+      canvas.backgroundColor = 'white'
+      
+      // Load objects from history
+      const elements = history[newIndex]
+      if (elements && elements.length > 0) {
+        elements.forEach(element => {
+          if (element && element.data) {
+            fabric.util.enlivenObjects([element.data], (objects) => {
+              const obj = objects[0]
+              obj.id = element.id
+              obj._ignoreSave = true
+              canvas.add(obj)
+            })
+          }
+        })
+      }
+      
+      canvas.renderAll()
+    }
   },
   
   redo: () => {
@@ -93,13 +139,54 @@ export const useBoardStore = create((set, get) => ({
       canUndo: true,
       canRedo: newIndex < history.length - 1
     })
+    
+    // Update canvas with next state if available
+    const canvas = window.fabricCanvas
+    if (canvas) {
+      canvas.clear()
+      canvas.backgroundColor = 'white'
+      
+      // Load objects from history
+      const elements = history[newIndex]
+      if (elements && elements.length > 0) {
+        elements.forEach(element => {
+          if (element && element.data) {
+            fabric.util.enlivenObjects([element.data], (objects) => {
+              const obj = objects[0]
+              obj.id = element.id
+              obj._ignoreSave = true
+              canvas.add(obj)
+            })
+          }
+        })
+      }
+      
+      canvas.renderAll()
+    }
   },
   
   saveBoard: async (boardId) => {
+    if (!boardId) {
+      console.error('No boardId provided for saving')
+      return false
+    }
+
     try {
       const { elements } = get()
-      await axios.patch(`/api/boards/${boardId}`, { elements })
-      return true
+      
+      // Make sure we're sending valid data
+      const cleanElements = elements.filter(el => el && el.id && el.type && el.data)
+      
+      const response = await axios.patch(`/api/boards/${boardId}`, { 
+        elements: cleanElements 
+      })
+      
+      if (response.status === 200) {
+        return true
+      } else {
+        console.error('Error saving board - unexpected status:', response.status)
+        return false
+      }
     } catch (error) {
       console.error('Error saving board:', error)
       return false

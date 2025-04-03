@@ -3,32 +3,64 @@ import { io } from 'socket.io-client'
 
 export const useSocketStore = create((set, get) => ({
   socket: null,
+  connectionStatus: 'disconnected', // 'disconnected', 'connecting', 'connected', 'error'
   
   initSocket: () => {
-    const { socket } = get()
-    if (socket) return socket
-
-    // Connect to server
-    const serverUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
-    const newSocket = io(serverUrl)
+    const { socket, connectionStatus } = get()
     
-    newSocket.on('connect', () => {
-      console.log('Connected to socket server')
-    })
+    if (socket) {
+      return socket
+    }
     
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error)
-    })
+    if (connectionStatus === 'connecting') {
+      return null
+    }
     
-    set({ socket: newSocket })
-    return newSocket
+    set({ connectionStatus: 'connecting' })
+    
+    try {
+      // Connect to server directly to avoid CORS issues with proxy
+      const serverUrl = 'http://localhost:5000'
+      
+      console.log("Connecting to socket server at:", serverUrl)
+      
+      const newSocket = io(serverUrl, {
+        transports: ['websocket'], // Use websocket only to avoid polling issues
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
+        timeout: 10000,
+        withCredentials: false // Important for CORS
+      })
+      
+      newSocket.on('connect', () => {
+        console.log('Connected to socket server')
+        set({ connectionStatus: 'connected', socket: newSocket })
+      })
+      
+      newSocket.on('connect_error', (error) => {
+        console.error('Socket connection error:', error.message)
+        set({ connectionStatus: 'error' })
+      })
+      
+      newSocket.on('disconnect', (reason) => {
+        console.log('Disconnected from socket server:', reason)
+        set({ connectionStatus: 'disconnected' })
+      })
+      
+      set({ socket: newSocket })
+      return newSocket
+    } catch (err) {
+      console.error('Error initializing socket:', err)
+      set({ connectionStatus: 'error' })
+      return null
+    }
   },
   
   disconnectSocket: () => {
     const { socket } = get()
     if (socket) {
       socket.disconnect()
-      set({ socket: null })
+      set({ socket: null, connectionStatus: 'disconnected' })
     }
   }
 }))

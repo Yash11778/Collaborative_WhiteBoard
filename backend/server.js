@@ -17,8 +17,9 @@ app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: "*", // This will accept connections from any origin
     methods: ['GET', 'POST'],
+    credentials: true
   },
 });
 
@@ -60,8 +61,27 @@ app.get('/api/boards/:id', async (req, res) => {
   }
 });
 
+// Add PATCH endpoint to update board elements
+app.patch('/api/boards/:id', async (req, res) => {
+  try {
+    const board = await Board.findById(req.params.id);
+    if (!board) return res.status(404).json({ error: 'Board not found' });
+    
+    // Update board properties
+    if (req.body.elements) board.elements = req.body.elements;
+    if (req.body.name) board.name = req.body.name;
+    
+    await board.save();
+    res.json(board);
+  } catch (error) {
+    console.error('Error updating board:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Socket.io connection handling
 const users = {};
+const boardAccessCounts = {};  // Track number of users per board
 
 io.on('connection', (socket) => {
   console.log('New client connected:', socket.id);
@@ -71,11 +91,25 @@ io.on('connection', (socket) => {
     users[socket.id] = {
       id: socket.id,
       boardId,
-      ...userData
+      ...userData,
+      joinedAt: Date.now()
     };
     
+    // Update board access counts
+    if (!boardAccessCounts[boardId]) {
+      boardAccessCounts[boardId] = 0;
+    }
+    boardAccessCounts[boardId]++;
+    
+    // Broadcast new user to all other users
     io.to(boardId).emit('user-joined', users[socket.id]);
-    io.to(boardId).emit('cursor-positions', Object.values(users).filter(user => user.boardId === boardId));
+    
+    // Send all current users positions to the new user
+    io.to(boardId).emit('cursor-positions', 
+      Object.values(users).filter(user => user.boardId === boardId));
+    
+    // Send active users count
+    io.to(boardId).emit('active-users-count', boardAccessCounts[boardId]);
   });
   
   socket.on('draw-element', (boardId, element) => {
@@ -102,6 +136,13 @@ io.on('connection', (socket) => {
     if (users[socket.id]) {
       const boardId = users[socket.id].boardId;
       io.to(boardId).emit('user-left', socket.id);
+      
+      // Update board access counts
+      if (boardAccessCounts[boardId]) {
+        boardAccessCounts[boardId]--;
+        io.to(boardId).emit('active-users-count', boardAccessCounts[boardId]);
+      }
+      
       delete users[socket.id];
     }
     console.log('Client disconnected:', socket.id);

@@ -1,20 +1,23 @@
 const mongoose = require('mongoose');
 
 const elementSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true
+  },
   type: {
     type: String,
-    required: true,
-    enum: ['line', 'rectangle', 'circle', 'text', 'path']
+    required: true
   },
-  properties: {
-    type: Object,
+  data: {
+    type: mongoose.Schema.Types.Mixed,
     required: true
   },
   createdAt: {
     type: Date,
     default: Date.now
   }
-});
+}, { _id: false });  // Don't create _id for sub-documents
 
 const boardSchema = new mongoose.Schema({
   name: {

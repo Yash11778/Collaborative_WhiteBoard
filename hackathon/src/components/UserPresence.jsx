@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useSocketStore } from '../store/socketStore'
+import JoinNotification from './JoinNotification'
 
 function UserPresence({ boardId }) {
   const [users, setUsers] = useState([])
+  const [notifications, setNotifications] = useState([])
   const { socket } = useSocketStore()
 
   useEffect(() => {
@@ -13,6 +15,12 @@ function UserPresence({ boardId }) {
         // Check if user already exists
         const exists = prev.some(u => u.id === user.id)
         if (exists) return prev
+        
+        // Add notification for new user (except for the first user which is likely self)
+        if (prev.length > 0) {
+          setNotifications(current => [...current, { id: user.id, user }])
+        }
+        
         return [...prev, user]
       })
     }
@@ -36,6 +44,10 @@ function UserPresence({ boardId }) {
     }
   }, [socket, boardId])
 
+  const removeNotification = (id) => {
+    setNotifications(current => current.filter(n => n.id !== id))
+  }
+
   return (
     <div className="user-presence flex items-center">
       {users.length > 0 ? (
@@ -57,6 +69,15 @@ function UserPresence({ boardId }) {
       ) : (
         <div className="text-sm text-gray-500">No other users online</div>
       )}
+      
+      {/* Join Notifications */}
+      {notifications.map(({ id, user }) => (
+        <JoinNotification 
+          key={id} 
+          user={user} 
+          onDismiss={() => removeNotification(id)} 
+        />
+      ))}
     </div>
   )
 }
