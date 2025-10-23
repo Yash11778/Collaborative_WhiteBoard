@@ -5,7 +5,58 @@
 - Vercel account ([sign up free](https://vercel.com))
 - MongoDB Atlas account ([sign up free](https://mongodb.com/atlas))
 
-## ⚡ Quick Start (5 minutes)
+## ⚡ Quick Start (Via Vercel Dashboard - Recommended)
+
+### 1️⃣ Deploy Backend First
+
+1. Go to [vercel.com/new](https://vercel.com/new)
+2. Import your GitHub repository
+3. **Root Directory**: `backend`
+4. **Framework Preset**: Other
+5. **Build Command**: Leave empty
+6. **Output Directory**: Leave empty
+7. **Install Command**: `npm install`
+8. Add **Environment Variables**:
+   - `MONGODB_URI` = Your MongoDB Atlas connection string
+   - `JWT_SECRET` = Any secure random string (e.g., `my-super-secret-jwt-key-123`)
+   - `NODE_ENV` = `production`
+9. Click **Deploy**
+10. **📋 Copy your backend URL** (e.g., `https://your-backend.vercel.app`)
+
+### 2️⃣ Deploy Frontend
+
+1. Go to [vercel.com/new](https://vercel.com/new) again
+2. Import the **same GitHub repository**
+3. **Root Directory**: `hackathon`
+4. **Framework Preset**: Vite
+5. **Build Command**: `npm run build`
+6. **Output Directory**: `dist`
+7. **Install Command**: `npm install`
+8. Add **Environment Variable**:
+   - `VITE_SERVER_URL` = Your backend URL from step 1
+9. Click **Deploy**
+
+### 3️⃣ Update CORS
+
+Edit `backend/server.js` around line 22 and 44:
+
+**Before:**
+```javascript
+origin: '*'
+```
+
+**After:**
+```javascript
+origin: ['https://your-frontend.vercel.app', 'http://localhost:5173']
+```
+
+Replace `your-frontend.vercel.app` with your actual frontend URL.
+
+Commit and push to GitHub - Vercel will auto-redeploy!
+
+---
+
+## ⚡ Alternative: Deploy via CLI
 
 ### 1️⃣ Install Vercel CLI
 ```bash
