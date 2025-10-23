@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "install-all": "npm install --prefix backend && npm install --prefix hackathon",
-    "build": "npm run build --prefix hackathon",
+    "build": "cd hackathon && npm install && npm run build && cd ..",
     "start": "node backend/server.js",
-    "vercel-build": "npm install --prefix hackathon && npm run build --prefix hackathon"
+    "vercel-build": "cd hackathon && npm install && npm run build"
   },
   "engines": {
     "node": ">=18.x"
