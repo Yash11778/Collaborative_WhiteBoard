@@ -246,6 +246,32 @@ io.on('connection', (socket) => {
     socket.to(boardId).emit('element-deleted', elementId);
   });
   
+  // Handle grid toggle
+  socket.on('grid-toggled', (data) => {
+    const { boardId, showGrid } = data;
+    socket.to(boardId).emit('grid-toggled', { showGrid });
+  });
+  
+  // Handle zoom changes
+  socket.on('zoom-changed', (data) => {
+    const { boardId, zoomLevel } = data;
+    socket.to(boardId).emit('zoom-changed', { zoomLevel });
+  });
+  
+  // Handle object selection (for visual indicators)
+  socket.on('object-selected', (boardId, data) => {
+    socket.to(boardId).emit('object-selected', data);
+  });
+  
+  socket.on('object-deselected', (boardId, data) => {
+    socket.to(boardId).emit('object-deselected', data);
+  });
+  
+  // Handle tool changes (for awareness)
+  socket.on('tool-changed', (boardId, data) => {
+    socket.to(boardId).emit('tool-changed', data);
+  });
+  
   socket.on('cursor-move', (boardId, position) => {
     if (users[socket.id]) {
       users[socket.id].position = position;

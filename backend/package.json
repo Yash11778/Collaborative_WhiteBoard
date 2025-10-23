@@ -1,7 +1,6 @@
 {
   "name": "backend",
   "version": "1.0.0",
-
   "description": "CollabBoard backend server",
   "main": "server.js",
   "scripts": {
@@ -15,6 +14,7 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.546.0",
     "mongoose": "^7.5.0",
     "socket.io": "^4.7.2"
   },

@@ -3,6 +3,9 @@ import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import Canvas from '../components/Canvas';
 import Toolbar from '../components/Toolbar';
+import CanvasInfo from '../components/CanvasInfo';
+import ConnectionStatus from '../components/ConnectionStatus';
+import CollaborationIndicator from '../components/CollaborationIndicator';
 import { useBoardStore } from '../store/boardStore';
 import { useSocketStore } from '../store/socketStore';
 import ActiveUserCount from '../components/ActiveUserCount';
@@ -67,6 +70,9 @@ function BoardView() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] overflow-hidden">
+      <ConnectionStatus />
+      <CollaborationIndicator boardId={boardId} />
+      
       <div className="flex justify-between items-center mb-2">
         <h1 className="text-2xl font-bold truncate">{boardName}</h1>
         <div className="flex items-center space-x-3">
@@ -80,6 +86,7 @@ function BoardView() {
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 relative">
           <Canvas boardId={boardId} />
+          <CanvasInfo />
         </div>
         <ChatPanel boardId={boardId} />
       </div>

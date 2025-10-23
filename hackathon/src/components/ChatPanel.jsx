@@ -87,21 +87,24 @@ function ChatPanel({ boardId }) {
 
   return (
     <>
-      <div className="fixed bottom-4 right-4 z-10">
+      <div className="fixed bottom-4 right-4 z-50">
         {isChatOpen ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-80 flex flex-col chat-animation-enter-active" 
-               style={{ height: '400px' }}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-blue-500 dark:border-blue-400 w-96 flex flex-col chat-animation-enter-active" 
+               style={{ height: '500px' }}>
             {/* Chat Header */}
-            <div className="flex justify-between items-center px-4 py-2 border-b dark:border-gray-700">
-              <h3 className="font-semibold text-gray-800 dark:text-gray-200">
-                Chat
-              </h3>
+            <div className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-t-lg">
+              <div className="flex items-center gap-2">
+                <FaComment className="text-lg" />
+                <h3 className="font-bold text-lg">
+                  Live Chat 💬
+                </h3>
+              </div>
               <button
                 onClick={() => setChatOpen(false)}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                className="text-white hover:text-gray-200 hover:scale-110 transition-transform"
                 aria-label="Close chat"
               >
-                <FaTimes />
+                <FaTimes className="text-xl" />
               </button>
             </div>
             
@@ -165,12 +168,13 @@ function ChatPanel({ boardId }) {
         ) : (
           <button
             onClick={() => setChatOpen(true)}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg relative"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-5 rounded-full shadow-2xl relative transform hover:scale-110 transition-all duration-200 animate-pulse"
             aria-label="Open chat"
+            title="Open Live Chat 💬"
           >
-            <FaComment />
+            <FaComment className="text-2xl" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center badge-pulse">
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center badge-pulse shadow-lg animate-bounce">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}

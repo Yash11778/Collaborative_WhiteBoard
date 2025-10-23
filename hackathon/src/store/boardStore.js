@@ -129,6 +129,8 @@ export const useBoardStore = create((set, get) => ({
               const obj = objects[0]
               obj.id = element.id
               obj._ignoreSave = true
+              obj._loadedFromStore = true
+              obj._addedToStore = true
               canvas.add(obj)
             })
           }
@@ -166,6 +168,8 @@ export const useBoardStore = create((set, get) => ({
               const obj = objects[0]
               obj.id = element.id
               obj._ignoreSave = true
+              obj._loadedFromStore = true
+              obj._addedToStore = true
               canvas.add(obj)
             })
           }
