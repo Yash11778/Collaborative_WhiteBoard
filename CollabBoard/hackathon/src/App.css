@@ -1,0 +1,340 @@
+#root {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.tool-btn {
+  @apply p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors;
+}
+
+.active-tool {
+  @apply bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300;
+}
+
+/* Enhanced Tool Button Styles */
+.tool-btn-enhanced {
+  @apply p-2.5 rounded-lg transition-all duration-200 transform hover:scale-110 hover:shadow-md;
+  @apply flex items-center justify-center;
+  @apply text-gray-600 dark:text-gray-300;
+  @apply hover:bg-gray-100 dark:hover:bg-gray-700;
+}
+
+.tool-btn-enhanced:active {
+  @apply scale-95;
+}
+
+.active-tool-enhanced {
+  @apply bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg;
+  @apply hover:from-blue-600 hover:to-blue-700;
+}
+
+.active-tool-enhanced.eraser-active {
+  @apply bg-gradient-to-br from-red-500 to-pink-600;
+  @apply hover:from-red-600 hover:to-pink-700;
+}
+
+/* Slide-in animation for eraser modes */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Enhanced User cursor styles */
+.user-cursor {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1000;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease-out, left 0.1s ease-out, top 0.1s ease-out;
+  width: 20px;
+  height: 20px;
+}
+
+.user-cursor::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 16px solid;
+  transform: rotate(-45deg);
+  position: absolute;
+  top: -4px;
+  left: -4px;
+}
+
+.user-cursor::after {
+  content: attr(data-name);
+  display: block;
+  position: absolute;
+  top: 14px;
+  left: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+  background-color: inherit;
+  color: white;
+  padding: 2px 5px;
+  border-radius: 3px;
+  opacity: 0.85;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Add cursor animation for better visibility */
+@keyframes cursorPulse {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.1); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+.user-cursor.new-user {
+  animation: cursorPulse 0.5s ease-in-out 2;
+}
+
+/* Share modal styles */
+.share-modal-overlay {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.share-modal {
+  animation: slideUp 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Join notification animation */
+.notification-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.notification-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.notification-exit {
+  opacity: 1;
+}
+
+.notification-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+/* Chat panel styles */
+.chat-animation-enter {
+  transform: translateY(20px);
+  opacity: 0;
+}
+.chat-animation-enter-active {
+  transform: translateY(0);
+  opacity: 1;
+  transition: opacity 0.3s, transform 0.3s;
+}
+.chat-animation-exit {
+  opacity: 1;
+}
+.chat-animation-exit-active {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+/* Chat notification badge pulse */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.badge-pulse {
+  animation: pulse 1s infinite;
+}
+
+/* Smooth scrollbar styling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3b82f6 0%, #8b5cf6 100%);
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Smooth transitions for all elements */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Button hover effects */
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+button:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Gradient text animation */
+@keyframes gradient-animation {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-animation 3s ease infinite;
+}
+
+/* Enhanced text editing styles */
+.canvas-container canvas {
+  outline: none;
+}
+
+/* Make text cursor more visible */
+.canvas-container .upper-canvas {
+  cursor: inherit;
+}
+
+/* Text selection styling */
+::selection {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Fabric.js text editing enhancements */
+.canvas-container textarea.hidden-textarea {
+  opacity: 0 !important;
+  position: absolute !important;
+  z-index: -999 !important;
+}

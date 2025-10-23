@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "hackathon/package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "backend/server.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    { 
+      "src": "/api/(.*)", 
+      "dest": "backend/server.js" 
+    },
+    { 
+      "src": "/socket.io/(.*)", 
+      "dest": "backend/server.js" 
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "hackathon/dist/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot))",
+      "dest": "hackathon/dist/$1"
+    },
+    { 
+      "src": "/(.*)", 
+      "dest": "hackathon/dist/index.html" 
+    }
+  ]
+}
