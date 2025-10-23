@@ -224,35 +224,33 @@ function Toolbar({ boardId }) {
       return
     }
 
+    // IMPORTANT: Clean up ALL event listeners before switching tools
+    // This prevents tools from interfering with each other
+    canvas.off('mouse:down')
+    canvas.off('mouse:move')
+    canvas.off('mouse:up')
+    canvas.isDrawingMode = false
+    canvas.selection = false
+
     // Configure canvas based on selected tool
     switch (tool) {
       case 'select':
-        canvas.isDrawingMode = false
         canvas.selection = true
         canvas.defaultCursor = 'default'
         canvas.hoverCursor = 'move'
-        // Deselect any active drawing event handlers
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         break
         
       case 'pen':
         canvas.isDrawingMode = true
         canvas.freeDrawingBrush.color = strokeColor
         canvas.freeDrawingBrush.width = strokeWidth
+        canvas.defaultCursor = 'crosshair'
         break
         
       case 'rectangle':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let rect, isDown, origX, origY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           isDown = true
@@ -298,15 +296,9 @@ function Toolbar({ boardId }) {
         break
         
       case 'circle':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let circle, isDrawing, startX, startY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           isDrawing = true
@@ -350,15 +342,9 @@ function Toolbar({ boardId }) {
         break
         
       case 'line':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let line, isDrawingLine, lineStartX, lineStartY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           isDrawingLine = true
@@ -388,15 +374,9 @@ function Toolbar({ boardId }) {
         break
 
       case 'arrow':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let arrow, isDrawingArrow, arrowStartX, arrowStartY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           isDrawingArrow = true
@@ -464,15 +444,9 @@ function Toolbar({ boardId }) {
         break
 
       case 'diamond':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let diamond, isDiamond, diamondOrigX, diamondOrigY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           isDiamond = true
@@ -513,15 +487,9 @@ function Toolbar({ boardId }) {
         break
 
       case 'star':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let star, isStar, starOrigX, starOrigY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         const createStarPoints = () => {
           const points = []
@@ -573,15 +541,9 @@ function Toolbar({ boardId }) {
         break
 
       case 'triangle':
-        canvas.isDrawingMode = false
-        canvas.selection = false
         canvas.defaultCursor = 'crosshair'
         
         let triangle, isTriangle, triOrigX, triOrigY
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           isTriangle = true
@@ -626,13 +588,8 @@ function Toolbar({ boardId }) {
         break
         
       case 'text':
-        canvas.isDrawingMode = false
         canvas.selection = true
         canvas.defaultCursor = 'text'
-        
-        canvas.off('mouse:down')
-        canvas.off('mouse:move')
-        canvas.off('mouse:up')
         
         canvas.on('mouse:down', (o) => {
           // Only create new text if clicking on empty space
@@ -675,14 +632,7 @@ function Toolbar({ boardId }) {
         break
         
       case 'eraser':
-        canvas.isDrawingMode = false;
-        canvas.selection = false;
         canvas.defaultCursor = 'crosshair';
-        
-        // Clear any existing event listeners
-        canvas.off('mouse:down');
-        canvas.off('mouse:move');
-        canvas.off('mouse:up');
         
         let isErasing = false;
         const eraserSize = strokeWidth * 5; // Larger eraser for better usability
