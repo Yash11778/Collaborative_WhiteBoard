@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
 
-// Make sure to use the correct server URL
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+// Get API URL - use environment variable or relative path in production
+const API_URL = import.meta.env.VITE_SERVER_URL || 
+                (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000');
 
 // Configure axios defaults
 axios.defaults.baseURL = API_URL;

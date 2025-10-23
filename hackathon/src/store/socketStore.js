@@ -14,8 +14,11 @@ export const useSocketStore = create((set, get) => ({
     
     set({ connectionStatus: 'connecting' });
     
-    // Get backend URL from environment or default to localhost
-    const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
+    // Get backend URL from environment
+    // In production (same domain), use relative path
+    // In development, use localhost
+    const serverUrl = import.meta.env.VITE_SERVER_URL || 
+                      (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000');
     
     try {
       const newSocket = io(serverUrl, {

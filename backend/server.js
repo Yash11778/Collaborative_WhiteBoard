@@ -158,6 +158,13 @@ app.get('/api/boards/:boardId/messages', async (req, res) => {
   }
 });
 
+// Catch-all route to serve frontend's index.html for client-side routing
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../hackathon/dist/index.html'));
+  });
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
